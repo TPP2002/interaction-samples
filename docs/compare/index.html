@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>双表核对</title>
+<style>
+:root{--ink:#17271e;--muted:#526258;--line:#718176;--bg:#f4f6f4;--paper:#fff;--action:#174c37;--bad:#8e2424;--space:1rem;--text:1rem;--small:.875rem;--title:1.5rem}*{box-sizing:border-box}body{margin:0;font:var(--text)/1.55 system-ui,sans-serif;color:var(--ink);background:var(--bg)}main{max-width:68rem;margin:auto;padding:1.5rem}h1{font-size:var(--title);margin:0}h2{font-size:1.15rem;margin:1.5rem 0 .75rem}.top{display:flex;gap:var(--space);align-items:center;justify-content:space-between;flex-wrap:wrap}.muted{color:var(--muted);font-size:var(--small)}.files,.settings{display:grid;grid-template-columns:1fr 1fr;gap:var(--space);margin-top:var(--space)}fieldset{margin:0;border:1px solid var(--line);padding:var(--space);min-width:0;background:var(--paper)}legend{padding:0 .35rem;font-weight:600}label{display:block;margin:.5rem 0}input,select,button{font:inherit;max-width:100%;min-height:2.75rem}input[type=file]{width:100%}select{width:100%;padding:.35rem;border:1px solid var(--line);background:var(--paper);color:var(--ink)}button{border:1px solid var(--action);background:var(--paper);color:var(--action);padding:.55rem 1rem;border-radius:.2rem;touch-action:manipulation}button.primary{background:var(--action);color:var(--paper)}button:active{background:var(--ink);color:var(--paper)}:focus-visible{outline:3px solid var(--ink);outline-offset:3px}input[type=checkbox]{min-height:1.25rem;min-width:1.25rem;vertical-align:middle}.actions{display:flex;gap:.75rem;flex-wrap:wrap;margin-top:var(--space)}#status{min-height:3.25rem;margin:.5rem 0;color:var(--bad);white-space:pre-wrap}.summary{width:100%;border-collapse:collapse;margin:.75rem 0}.summary th,.summary td{padding:.5rem;border-bottom:1px solid var(--line);text-align:left;font-weight:400}.summary th{font-weight:600}.scroll{overflow:auto;max-width:100%;background:var(--paper)}.details{width:100%;min-width:46rem;border-collapse:collapse;font-size:var(--small)}.details th,.details td{text-align:left;vertical-align:top;padding:.6rem;border-bottom:1px solid var(--line);overflow-wrap:anywhere;max-width:18rem;white-space:pre-wrap}.details th{background:var(--bg)}.count{font-variant-numeric:tabular-nums}#result[hidden]{display:none}@media(hover:hover){button:hover{border-color:var(--ink);color:var(--ink)}button.primary:hover{background:var(--ink);color:var(--paper)}}@media(max-width:42rem){main{padding:var(--space)}.files,.settings{grid-template-columns:1fr}.actions button{flex:1;min-height:3rem}.top button{min-height:3rem}}
+</style>
+<main>
+<div class="top"><h1>双表核对</h1><button id="demo">加载演示</button></div>
+<p class="muted">选择两个 CSV 文件，核对匹配键和一个值字段。文件在当前浏览器内处理。</p>
+<label>文件编码<select id="encoding"><option value="utf-8">UTF-8（含 BOM）</option><option value="gb18030">GB18030／GBK</option></select></label>
+<div class="files">
+<fieldset><legend>A 表</legend><input id="fileA" aria-label="选择A表" type="file" accept=".csv,text/csv"><p id="infoA" class="muted">尚未选择文件</p><label>匹配键<select id="keyA" aria-label="A表匹配键"></select></label><label>值字段<select id="valueA" aria-label="A表值字段"></select></label></fieldset>
+<fieldset><legend>B 表</legend><input id="fileB" aria-label="选择B表" type="file" accept=".csv,text/csv"><p id="infoB" class="muted">尚未选择文件</p><label>匹配键<select id="keyB" aria-label="B表匹配键"></select></label><label>值字段<select id="valueB" aria-label="B表值字段"></select></label></fieldset>
+</div>
+<div class="settings"><label>值的比较方式<select id="mode"><option value="text">原样文本</option><option value="money">两位小数数值</option></select></label><label><input id="trim" type="checkbox"> 去除匹配键首尾空格</label></div>
+<p class="muted">匹配键始终按文本处理，保留前导零。空值单独待核；数值模式最多接受 2 位小数，不接受货币符号或千位分隔符。</p>
+<div class="actions"><button class="primary" id="run">开始核对</button><button id="download">下载差异报告</button></div>
+<p id="status" role="status" aria-live="polite"></p>
+<section id="result" hidden><h2>核对结果</h2><p id="basis" class="muted"></p><table class="summary"><thead><tr><th>结果</th><th>数量</th><th>单位</th></tr></thead><tbody id="summary"></tbody></table><h2>差异明细</h2><p id="preview" class="muted"></p><div class="scroll"><table class="details"><thead><tr><th>分类</th><th>匹配键</th><th>A 表记录</th><th>A 值</th><th>B 表记录</th><th>B 值</th><th>说明</th></tr></thead><tbody id="details"></tbody></table></div></section>
+</main>
+<script>
+'use strict';
+const $=id=>document.getElementById(id), state={A:null,B:null,result:null};
+const LIMIT=10000;
+function invalidate(message='输入已改变，请重新核对。'){state.result=null;$('result').hidden=true;$('status').textContent=message;}
+function parseCSV(text){
+  text=text.replace(/^\uFEFF/,'');let rows=[],row=[],field='',quoted=false,closed=false;
+  function cell(){row.push(field);field='';closed=false;}
+  function end(){cell();rows.push(row);row=[];}
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(quoted){if(c==='"'){if(text[i+1]==='"'){field+='"';i++;}else{quoted=false;closed=true;}}else field+=c;continue;}
+    if(c==='"'){if(field||closed)throw Error('CSV 引号位置错误。');quoted=true;}
+    else if(c===',')cell();
+    else if(c==='\r'||c==='\n'){if(c==='\r'&&text[i+1]==='\n')i++;end();}
+    else{if(closed)throw Error('CSV 结束引号后存在多余字符。');field+=c;}
+  }
+  if(quoted)throw Error('CSV 引号未闭合。');
+  if(field!==''||row.length||closed)end();
+  if(!rows.length)throw Error('文件为空。');
+  const header=rows.shift();
+  if(header.some(x=>x.trim()==='')||new Set(header).size!==header.length)throw Error('表头含空白或重复列名，请先修正。');
+  if(rows.length>LIMIT)throw Error('单表超过 10000 条记录，请先拆分。');
+  rows.forEach((r,i)=>{if(r.length!==header.length)throw Error('第 '+(i+1)+' 条数据的列数与表头不一致。');});
+  return {header,rows};
+}
+function selectColumns(side,data){
+  for(const type of ['key','value']){const el=$(type+side);el.replaceChildren();for(const name of data.header){const option=document.createElement('option');option.textContent=name;option.value=name;el.append(option);}el.selectedIndex=type==='key'?0:Math.min(1,data.header.length-1);}
+  $('info'+side).textContent=data.name+'，'+data.rows.length+' 条记录'+(data.demo?'（虚构演示）':'');
+}
+async function load(side,file){
+  if(!file)return;
+  if(state.A?.demo||state.B?.demo){state.A=null;state.B=null;for(const s of ['A','B']){$('info'+s).textContent='尚未选择文件';$('key'+s).replaceChildren();$('value'+s).replaceChildren();}}
+  state[side]=null;invalidate('正在读取 '+side+' 表…');
+  try{if(file.size>10*1024*1024)throw Error('单个文件不能超过 10 MB。');const buffer=await file.arrayBuffer();const text=new TextDecoder($('encoding').value,{fatal:true}).decode(buffer);const data={...parseCSV(text),name:file.name,demo:false};state[side]=data;selectColumns(side,data);$('status').textContent='文件已读取，选择字段后开始核对。';}
+  catch(error){$('info'+side).textContent='文件读取失败';$('key'+side).replaceChildren();$('value'+side).replaceChildren();$('status').textContent=error.message+' 如出现编码错误，请切换编码后重新选择文件。';}
+}
+function cents(value){if(!/^[+-]?\d+(?:\.\d{1,2})?$/.test(value)||value.length>60)throw Error('数值格式不符');const sign=value.startsWith('-')?-1n:1n;const parts=value.replace(/^[+-]/,'').split('.');return sign*(BigInt(parts[0])*100n+BigInt((parts[1]||'').padEnd(2,'0')));}
+function group(data,index,trim){const groups=new Map(),empty=[];data.rows.forEach((values,i)=>{const raw=values[index],key=trim?raw.trim():raw,item={values,record:i+1};if(key==='')empty.push(item);else{if(!groups.has(key))groups.set(key,[]);groups.get(key).push(item);}});return {groups,empty};}
+function reconcile(A,B,settings){
+  const ka=A.header.indexOf(settings.keyA),kb=B.header.indexOf(settings.keyB),va=A.header.indexOf(settings.valueA),vb=B.header.indexOf(settings.valueB);
+  if([ka,kb,va,vb].some(x=>x<0))throw Error('字段不存在，请重新选择。');
+  const a=group(A,ka,settings.trim),b=group(B,kb,settings.trim),details=[],stats={same:0,diff:0,onlyA:0,onlyB:0,duplicateKeys:0,duplicateRows:0,emptyA:a.empty.length,emptyB:b.empty.length,pending:0};
+  function add(type,key,left,right,note=''){details.push({type,key,a:left?.record??'',av:left?.values[va]??'',b:right?.record??'',bv:right?.values[vb]??'',note});}
+  for(const row of a.empty)add('空键','',row,null,'不能自动匹配');
+  for(const row of b.empty)add('空键','',null,row,'不能自动匹配');
+  for(const key of new Set([...a.groups.keys(),...b.groups.keys()])){
+    const left=a.groups.get(key)||[],right=b.groups.get(key)||[];
+    if(left.length>1||right.length>1){stats.duplicateKeys++;stats.duplicateRows+=left.length+right.length;for(const row of left)add('重复键',key,row,null,'该键 A 表 '+left.length+' 条、B 表 '+right.length+' 条，不自动配对');for(const row of right)add('重复键',key,null,row,'同键记录需先确认匹配规则');continue;}
+    if(!left.length){stats.onlyB++;add('仅 B 有',key,null,right[0]);continue;}
+    if(!right.length){stats.onlyA++;add('仅 A 有',key,left[0],null);continue;}
+    const av=left[0].values[va],bv=right[0].values[vb];
+    if(av===''||bv===''){stats.pending++;add('待核',key,left[0],right[0],'存在空值，不能视为 0 或一致');continue;}
+    let same;
+    try{same=settings.mode==='money'?cents(av)===cents(bv):av===bv;}
+    catch(error){stats.pending++;add('待核',key,left[0],right[0],'数值格式不符，不推测或补写');continue;}
+    stats[same?'same':'diff']++;add(same?'一致':'值不同',key,left[0],right[0]);
+  }
+  const coveredA=details.filter(x=>x.a!=='').length,coveredB=details.filter(x=>x.b!=='').length;
+  if(coveredA!==A.rows.length||coveredB!==B.rows.length)throw Error('记录覆盖检查失败，结果不可使用。');
+  return {details,stats,coveredA,coveredB,settings,sourceA:A.name,sourceB:B.name,demo:!!(A.demo||B.demo)};
+}
+function row(cells){const tr=document.createElement('tr');for(const value of cells){const td=document.createElement('td');td.textContent=String(value);tr.append(td);}return tr;}
+function render(result){
+  const s=result.stats;$('summary').replaceChildren();
+  for(const entry of [['一致',s.same,'配对'],['值不同',s.diff,'配对'],['仅 A 有',s.onlyA,'记录'],['仅 B 有',s.onlyB,'记录'],['重复键',s.duplicateKeys,'键'],['重复键涉及',s.duplicateRows,'记录'],['空键 A／B',s.emptyA+'／'+s.emptyB,'记录'],['待核',s.pending,'配对'],['覆盖 A／B',result.coveredA+'／'+result.coveredB,'原表记录']])$('summary').append(row(entry));
+  const differences=result.details.filter(x=>x.type!=='一致');$('details').replaceChildren();for(const item of differences.slice(0,100))$('details').append(row([item.type,item.key,item.a,item.av,item.b,item.bv,item.note]));
+  $('basis').textContent=(result.demo?'虚构演示。':'')+'A 表 '+result.sourceA+'；B 表 '+result.sourceB+'。键：'+result.settings.keyA+'／'+result.settings.keyB+'；值：'+result.settings.valueA+'／'+result.settings.valueB+'。';
+  $('preview').textContent=differences.length?'共 '+differences.length+' 条明细，显示前 '+Math.min(100,differences.length)+' 条。下载包含全部分类及一致项。':'没有差异明细。';
+  $('result').hidden=false;
+  const unresolved=s.duplicateRows+s.emptyA+s.emptyB+s.pending;
+  $('status').textContent=result.coveredA+result.coveredB===0?'两张表均没有数据记录。':unresolved?'已核对全部记录；重复键、空键、空值或格式问题已单列，按明细核实。':'已核对全部记录。';
+  $('status').style.color=unresolved?'var(--bad)':'var(--ink)';
+}
+function settings(){return {keyA:$('keyA').value,keyB:$('keyB').value,valueA:$('valueA').value,valueB:$('valueB').value,mode:$('mode').value,trim:$('trim').checked};}
+function csvCell(value){let s=String(value);if(/^[=+\-@\t\r]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';}
+$('fileA').addEventListener('change',event=>load('A',event.target.files[0]));$('fileB').addEventListener('change',event=>load('B',event.target.files[0]));
+for(const id of ['keyA','keyB','valueA','valueB','mode','trim'])$(id).addEventListener('change',()=>invalidate());
+$('encoding').addEventListener('change',()=>{state.A=null;state.B=null;for(const side of ['A','B']){$('file'+side).value='';$('info'+side).textContent='编码已改变，请重新选择文件';$('key'+side).replaceChildren();$('value'+side).replaceChildren();}invalidate('请重新选择两份文件。');});
+$('run').addEventListener('click',()=>{invalidate('');try{if(!state.A||!state.B)throw Error('请先选择两份可读取的 CSV 文件。');state.result=reconcile(state.A,state.B,settings());render(state.result);}catch(error){state.result=null;$('status').textContent=error.message;}});
+$('download').addEventListener('click',()=>{if(!state.result){$('status').textContent='请先完成当前输入的核对，再下载报告。';return;}const r=state.result;const lines=[['分类','匹配键','A表记录序号','A值','B表记录序号','B值','说明','A表文件','B表文件','A表键字段','B表键字段','A表值字段','B表值字段','比较方式','键去首尾空格','演示数据'],...r.details.map(x=>[x.type,x.key,x.a,x.av,x.b,x.bv,x.note,r.sourceA,r.sourceB,r.settings.keyA,r.settings.keyB,r.settings.valueA,r.settings.valueB,r.settings.mode==='money'?'两位小数数值':'原样文本',r.settings.trim?'是':'否',r.demo?'是':'否'])];const blob=new Blob(['\uFEFF'+lines.map(x=>x.map(csvCell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=r.demo?'虚构演示-双表核对.csv':'双表核对报告.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);$('status').textContent='已生成 CSV。以 =、+、-、@ 等字符开头的内容按安全文本导出。';});
+$('demo').addEventListener('click',()=>{
+  state.A={name:'订单表（虚构）',demo:true,...parseCSV('订单号,金额\n001,100\n002,89.90\n003,0\n004,19\n005,12\n005,13\n,1\n006,\n')};
+  state.B={name:'收款表（虚构）',demo:true,...parseCSV('订单编号,实收\n001,100.00\n002,79.90\n003,0.00\n007,35\n005,25\n,4\n006,0\n')};
+  for(const side of ['A','B']){$('file'+side).value='';selectColumns(side,state[side]);}$('mode').value='money';$('trim').checked=false;invalidate('已载入虚构演示。点击开始核对查看实际结果。');
+});
+</script>
+</html>

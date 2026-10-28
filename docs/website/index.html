@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="网页定制交互样品：产品图片切换、大图、配色与需求整理。">
+  <title>产品展示页 · 网页定制样品</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main">跳到正文</a>
+  <header class="site-header wrap">
+    <a class="brand" href="#main"><span class="brand-mark" aria-hidden="true">页</span><span>网页定制<span class="brand-note">交互样品</span></span></a>
+    <nav aria-label="页面导航"><a href="#features">功能清单</a><a href="#brief">整理需求</a></nav>
+  </header>
+  <main id="main">
+    <section class="hero wrap" aria-labelledby="page-title">
+      <div class="gallery">
+        <div class="image-tools" role="group" aria-label="产品图片">
+          <button type="button" data-image="scene" aria-pressed="true">场景展示</button>
+          <button type="button" data-image="plain" aria-pressed="false">白底原图</button>
+        </div>
+        <button class="image-button" id="open-image" type="button" aria-label="放大当前产品图">
+          <img id="product-image" src="assets/scene.png" alt="白色陶瓷杯配橙色杯耳，摆放在日照桌面上" width="1254" height="1254">
+          <span>查看大图</span>
+        </button>
+        <p class="caption">AI 生成的虚构产品，用于展示页面效果</p>
+      </div>
+      <div class="intro">
+        <p class="sample-kind">产品展示页</p>
+        <h1 id="page-title">商品看得清，<br>手机也好逛</h1>
+        <p class="lead">图片、文案和交互，按你的产品来做。先试试这个样品，再说说你需要什么。</p>
+        <div class="theme-choice" role="group" aria-label="页面配色">
+          <span>试试配色</span>
+          <button type="button" data-theme="clay" aria-pressed="true">陶橙</button>
+          <button type="button" data-theme="green" aria-pressed="false">深绿</button>
+        </div>
+        <a class="primary" href="#brief">整理我的需求</a>
+        <p class="intro-note">先确认页面、功能和交付内容，再按需求报价。</p>
+      </div>
+    </section>
+    <section class="features wrap section" id="features" aria-labelledby="features-title">
+      <div class="section-heading"><h2 id="features-title">点得到，也用得上</h2><p>这张页面里可以实际操作的内容</p></div>
+      <dl class="feature-list">
+        <div><dt>产品图片</dt><dd>切换白底图与场景图，点击查看大图。</dd></div>
+        <div><dt>手机排版</dt><dd>窄屏上下排列，图片和按钮保留完整操作区域。</dd></div>
+        <div><dt>需求整理</dt><dd>选页面用途和功能，生成可保存的文字需求单。</dd></div>
+        <div><dt>页面文件</dt><dd>交付 HTML、CSS、JavaScript 和图片；可继续按需求修改。</dd></div>
+      </dl>
+    </section>
+    <section class="brief-section section" id="brief" aria-labelledby="brief-title">
+      <div class="wrap brief-grid">
+        <div class="brief-intro"><h2 id="brief-title">你想做什么页面？</h2><p>把用途和功能写清楚，沟通会快一些。</p><p class="small">这里只在当前浏览器整理文字，不会发送或保存到服务器。</p></div>
+        <div class="brief-panel">
+          <form id="brief-form" novalidate>
+            <label for="project">页面名称或用途 <span class="required">必填</span></label>
+            <input id="project" name="project" maxlength="80" autocomplete="off" placeholder="例如：咖啡器具产品展示" aria-describedby="project-error" required>
+            <p class="field-error" id="project-error"></p>
+            <label for="page-type">页面类型</label>
+            <select id="page-type" name="page-type"><option>产品展示页</option><option>活动介绍页</option><option>作品展示页</option><option>现有页面修改</option><option>其他，按说明评估</option></select>
+            <fieldset><legend>需要哪些功能</legend><div class="check-grid">
+              <label><input type="checkbox" name="feature" value="产品图片与大图">产品图片与大图</label>
+              <label><input type="checkbox" name="feature" value="手机与电脑适配">手机与电脑适配</label>
+              <label><input type="checkbox" name="feature" value="内容筛选或切换">内容筛选或切换</label>
+              <label><input type="checkbox" name="feature" value="表单或需求整理">表单或需求整理</label>
+            </div></fieldset>
+            <label for="requirements">具体说明 <span class="required">必填</span></label>
+            <textarea id="requirements" name="requirements" rows="4" minlength="10" maxlength="1500" placeholder="给谁看？准备了哪些内容？希望访客完成什么操作？" aria-describedby="requirements-error" required></textarea>
+            <p class="field-error" id="requirements-error"></p>
+            <label for="delivery">希望何时交付</label>
+            <input id="delivery" name="delivery" maxlength="80" placeholder="可以先留空，沟通时再定">
+            <div class="form-actions"><button class="primary" type="submit">生成需求单</button><button class="secondary" id="download-brief" type="button" disabled>下载需求单</button></div>
+            <p class="status" id="brief-status" role="status" aria-live="polite"></p>
+          </form>
+          <section id="brief-result" hidden aria-labelledby="result-title"><h3 id="result-title">需求单</h3><pre id="brief-text"></pre></section>
+        </div>
+      </div>
+    </section>
+  </main>
+  <footer class="site-footer wrap"><p>网页定制交互样品</p><p>产品为虚构示意，无购买或在线预约功能</p></footer>
+  <dialog id="image-dialog" aria-labelledby="image-title">
+    <div class="dialog-header"><h2 id="image-title">产品图</h2><button class="secondary" id="close-image" type="button">关闭大图</button></div>
+    <img id="large-image" src="assets/scene.png" alt="白色陶瓷杯配橙色杯耳的场景示意" width="1254" height="1254">
+  </dialog>
+</body>
+</html>

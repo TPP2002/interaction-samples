@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>资料查找 · 虚构演示</title><link rel="stylesheet" href="style.css">
+  <script defer src="data.js"></script><script defer src="app.js"></script>
+</head>
+<body>
+  <header><div><h1>资料查找</h1><p>纸鸢项目 · 4 份原创虚构资料</p></div><span class="scope">AI 辅助整理演示</span></header>
+  <main>
+    <form id="search-form">
+      <div class="query"><label for="query">找什么</label><input id="query" type="search" value="交付日期" placeholder="输入关键词或来源编号" maxlength="80"></div>
+      <div class="category"><label for="category">资料分类</label><select id="category"><option value="">全部资料</option><option>计划</option><option>交付</option><option>复核</option></select></div>
+      <button class="primary" type="submit">搜索资料</button><button id="reset" type="button">查看全部</button>
+    </form>
+    <p id="status" class="status" role="status">正在载入资料…</p>
+    <div class="workspace">
+      <section class="results" aria-label="检索结果"><h2>命中片段</h2><div id="results"></div></section>
+      <article id="source" tabindex="-1" aria-label="来源原文"><div class="source-head"><div><p id="source-meta" class="meta"></p><h2 id="source-title">来源原文</h2></div><a id="download" class="button" download>下载原文</a></div><p id="source-file" class="filename"></p><ol id="source-lines"></ol><details><summary>文件校验值</summary><p id="source-hash" class="hash"></p></details></article>
+    </div>
+    <noscript><p>请开启浏览器 JavaScript，或直接阅读“演示资料”目录中的原文。</p></noscript>
+  </main>
+  <footer>关键词检索 · 原文与整理稿分开 · 本页不调用外部模型</footer>
+</body>
+</html>
