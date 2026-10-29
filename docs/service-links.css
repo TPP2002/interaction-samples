@@ -1,0 +1,38 @@
+.sample-service-links {
+  --service-font: 1rem;
+  --service-space: 1.5rem;
+  --service-gap: .5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--service-gap);
+  width: calc(100% - 3rem);
+  max-width: 68rem;
+  margin: 0 auto;
+  padding: var(--service-space) 0;
+  border-top: 1px solid currentColor;
+  color: inherit;
+}
+.sample-service-links a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  padding: .5rem .9rem;
+  border: 1px solid currentColor;
+  color: inherit;
+  font-size: var(--service-font);
+  line-height: 1.5;
+  text-decoration: none;
+  touch-action: manipulation;
+}
+.sample-service-links a:focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: 3px;
+}
+.sample-service-links a:active {
+  outline: 2px solid currentColor;
+  outline-offset: 1px;
+}
+@media (hover: hover) {
+  .sample-service-links a:hover { text-decoration: underline; }
+}
